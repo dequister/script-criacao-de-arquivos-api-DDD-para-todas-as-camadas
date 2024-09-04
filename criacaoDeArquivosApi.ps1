@@ -1,45 +1,55 @@
 param(
-    [string]$entityName,
-    [string]$entityNameSpace
+    [string]$caminhoPai,
+    [string]$entidadeNome,
+    [string]$nameSpace,
+    [string[]]$metodos
 )
 
-$caminhoPai = "C:\Work\Meus projetos\ApiPedidos\"
+#$caminhoPai = "C:\Work\Meus projetos\ApiPedidos\"
 # Diretórios base para cada camada
 $controllerDir = "$caminhoPai`pedidos-api\Controllers"
-$appServiceDir = "$caminhoPai$entityNameSpace.Application\AppService"
-$serviceDir = "$caminhoPai$entityNameSpace.Domain\Service"
-$repositoryDir = "$caminhoPai$entityNameSpace.Data.SqlServer\Repository"
+$appServiceDir = "$caminhoPai$nameSpace.Application\AppService"
+$serviceDir = "$caminhoPai$nameSpace.Domain\Service"
+$repositoryDir = "$caminhoPai$nameSpace.Data.SqlServer\Repository"
 
 # Criar arquivos de interface
-$interfaceAppService = "$caminhoPai$entityNameSpace.Application\Interface\I$entityName`AppService.cs"
-$interfaceService = "$caminhoPai$entityNameSpace.Domain\Interface\Service\I$entityName`Service.cs"
-$interfaceRepository = "$caminhoPai$entityNameSpace.Domain\Interface\Repository\I$entityName`Repository.cs"
+$interfaceAppService = "$caminhoPai$nameSpace.Application\Interface\I$entidadeNome`AppService.cs"
+$interfaceService = "$caminhoPai$nameSpace.Domain\Interface\Service\I$entidadeNome`Service.cs"
+$interfaceRepository = "$caminhoPai$nameSpace.Domain\Interface\Repository\I$entidadeNome`Repository.cs"
  
 # Criar arquivos de implementação
-$controller = "$controllerDir\$entityName`Controller.cs"
-$appService = "$appServiceDir\$entityName`AppService.cs"
-$service = "$serviceDir\$entityName`Service.cs"
-$repository = "$repositoryDir\$entityName`Repository.cs"
+$controller = "$controllerDir\$entidadeNome`Controller.cs"
+$appService = "$appServiceDir\$entidadeNome`AppService.cs"
+$service = "$serviceDir\$entidadeNome`Service.cs"
+$repository = "$repositoryDir\$entidadeNome`Repository.cs"
+
+# Gera os métodos para as interfaces
+$method = ""
+if ($metodos) {
+    $metodos | ForEach-Object {
+        $method += "        $_;`n"
+    }
+}
 
 # Conteúdo base para cada arquivo
 $controllerContent = @"
 using Microsoft.AspNetCore.Mvc;
-using $entityNameSpace.Application.AppService;
-using $entityNameSpace.Application.Interface;
-using $entityNameSpace.Models;
+using $nameSpace.Application.AppService;
+using $nameSpace.Application.Interface;
+using $nameSpace.Models;
 
-namespace $entityNameSpace.Controllers
+namespace $nameSpace.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class $entityName`Controller : ControllerBase
+    public class $entidadeNome`Controller : ControllerBase
     {
-        private readonly I$entityName`AppService _$entityName`AppService;
-        private readonly ILogger<$entityName`Controller> _logger;
+        private readonly I$entidadeNome`AppService _$entidadeNome`AppService;
+        private readonly ILogger<$entidadeNome`Controller> _logger;
 
-        public $entityName`Controller(I$entityName`AppService $entityName`AppService, ILogger<$entityName`Controller> logger)
+        public $entidadeNome`Controller(I$entidadeNome`AppService $entidadeNome`AppService, ILogger<$entidadeNome`Controller> logger)
         {
-            _$entityName`AppService = $entityName`AppService;
+            _$entidadeNome`AppService = $entidadeNome`AppService;
             _logger = logger;
         }
 
@@ -52,19 +62,19 @@ $appServiceContent = @"
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using $entityNameSpace.Application.Interface;
-using $entityNameSpace.Domain.Interface.Service;
-using $entityNameSpace.Models;
+using $nameSpace.Application.Interface;
+using $nameSpace.Domain.Interface.Service;
+using $nameSpace.Models;
 
-namespace $entityNameSpace.Application.AppService
+namespace $nameSpace.Application.AppService
 {
-    public class $entityName`AppService : I$entityName`AppService
+    public class $entidadeNome`AppService : I$entidadeNome`AppService
     {
-        private readonly I$entityName`Service _$entityName`Service;
+        private readonly I$entidadeNome`Service _$entidadeNome`Service;
 
-        public $entityName`AppService(I$entityName`Service $entityName`Service)
+        public $entidadeNome`AppService(I$entidadeNome`Service $entidadeNome`Service)
         {
-            _$entityName`Service = $entityName`Service;
+            _$entidadeNome`Service = $entidadeNome`Service;
         }
 
         // Métodos do AppService
@@ -73,22 +83,22 @@ namespace $entityNameSpace.Application.AppService
 "@
 
 $serviceContent = @"
-using $entityNameSpace.Domain.Interface.Repository;
-using $entityNameSpace.Domain.Interface.Service;
-using $entityNameSpace.Models;
+using $nameSpace.Domain.Interface.Repository;
+using $nameSpace.Domain.Interface.Service;
+using $nameSpace.Models;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace $entityNameSpace.Domain.Service
+namespace $nameSpace.Domain.Service
 {
-    public class $entityName`Service : I$entityName`Service
+    public class $entidadeNome`Service : I$entidadeNome`Service
     {
-        private readonly I$entityName`Repository _$entityName`Repository;
+        private readonly I$entidadeNome`Repository _$entidadeNome`Repository;
 
-        public $entityName`Service(I$entityName`Repository $entityName`Repository)
+        public $entidadeNome`Service(I$entidadeNome`Repository $entidadeNome`Repository)
         {
-            _$entityName`Repository = $entityName`Repository;
+            _$entidadeNome`Repository = $entidadeNome`Repository;
         }
 
         // Métodos do Service
@@ -97,22 +107,22 @@ namespace $entityNameSpace.Domain.Service
 "@
 
 $repositoryContent = @"
-using $entityNameSpace.Data.SqlServer.Context;
-using $entityNameSpace.Domain.Interface.Repository;
-using $entityNameSpace.Models;
+using $nameSpace.Data.SqlServer.Context;
+using $nameSpace.Domain.Interface.Repository;
+using $nameSpace.Models;
 using Dapper;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
 
-namespace $entityNameSpace.Data.SqlServer.Repository
+namespace $nameSpace.Data.SqlServer.Repository
 {
-    public class $entityName`Repository : I$entityName`Repository
+    public class $entidadeNome`Repository : I$entidadeNome`Repository
     {
         private readonly DbBaseOppContext _dbBaseOppContext;
 
-        public $entityName`Repository(DbBaseOppContext dbBaseOppContext)
+        public $entidadeNome`Repository(DbBaseOppContext dbBaseOppContext)
         {
             _dbBaseOppContext = dbBaseOppContext;
         }
@@ -123,38 +133,41 @@ namespace $entityNameSpace.Data.SqlServer.Repository
 "@
 
 $appServiceInterfaceContent = @"
-using $entityNameSpace.Models;
+using $nameSpace.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace $entityNameSpace.Application.Interface
+namespace $nameSpace.Application.Interface
 {
-    public interface I$entityName`AppService
+    public interface I$entidadeNome`AppService
     {
-        // Assinaturas dos métodos do AppService
-    }
+$method    }
 }
 "@
 
 $serviceInterfaceContent = @"
-using $entityNameSpace.Models;
+using $nameSpace.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace $entityNameSpace.Domain.Interface.Service
+namespace $nameSpace.Domain.Interface.Service
 {
-    public interface I$entityName`Service
+    public interface I$entidadeNome`Service
     {
-        // Assinaturas dos métodos do Service
-    }
+$method    }
 }
 "@
 
 $repositoryInterfaceContent = @"
-using $entityNameSpace.Models;
+using $nameSpace.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace $entityNameSpace.Domain.Interface.Repository
+namespace $nameSpace.Domain.Interface.Repository
 {
-    public interface I$entityName`Repository
+    public interface I$entidadeNome`Repository
     {
-        // Assinaturas dos métodos do Repositório
-    }
+$method    }
 }
 "@
 
@@ -174,4 +187,4 @@ Set-Content -Path $appService -Value $appServiceContent
 Set-Content -Path $service -Value $serviceContent
 Set-Content -Path $repository -Value $repositoryContent
 
-Write-Host "Arquivos criados com sucesso para a entidade: $entityName"
+Write-Host "Arquivos criados com sucesso para a entidade: $entidadeNome"
