@@ -2,10 +2,9 @@ param(
     [string]$caminhoPai,
     [string]$entidadeNome,
     [string]$nameSpace,
-    [string[]]$metodos
+    [array]$metodos
 )
 
-#$caminhoPai = "C:\Work\Meus projetos\ApiPedidos\"
 # Diretórios base para cada camada
 $controllerDir = "$caminhoPai`pedidos-api\Controllers"
 $appServiceDir = "$caminhoPai$nameSpace.Application\AppService"
@@ -23,11 +22,80 @@ $appService = "$appServiceDir\$entidadeNome`AppService.cs"
 $service = "$serviceDir\$entidadeNome`Service.cs"
 $repository = "$repositoryDir\$entidadeNome`Repository.cs"
 
-# Gera os métodos para as interfaces
-$method = ""
+# Gera os métodos para as interfaces e implementações
+$interfaceMethods = ""
+$controllerMethods = ""
+$appServiceMethods = ""
+$serviceMethods = ""
+$repositoryMethods = ""
+
 if ($metodos) {
-    $metodos | ForEach-Object {
-        $method += "        $_;`n"
+    foreach ($metodo in $metodos) {
+        $nomeMetodo = $metodo.Nome
+        $tipoHttp = $metodo.Http
+        $proc = $metodo.Proc
+        $parametroTipo = $metodo.ParametroTipo
+        $parametroNome = $metodo.ParametroNome
+        $paramentroRetornoTipo = $metodo.ParametroRetornoTipo
+
+        # Adiciona o método na interface
+        $interfaceMethods += "        Task<$paramentroRetornoTipo> $nomeMetodo($parametroTipo $parametroNome);`n"
+
+        # Define o atributo HTTP e a anotação correta (se necessária)
+        $httpAttribute = "[Http$tipoHttp(`"[action]`")]"
+        $parametroComAnotacao = ""
+        if ($tipoHttp -eq "Post" -or $tipoHttp -eq "Put") {
+            $parametroComAnotacao = "[FromBody] $parametroTipo $parametroNome"
+        } elseif ($tipoHttp -eq "Get" -or $tipoHttp -eq "Delete") {
+            $parametroComAnotacao = "[FromQuery] $parametroTipo $parametroNome"
+          elseif ($tipoHttp -eq "")
+            $parametroComAnotacao = ""
+        }
+
+        # Controller
+        $controllerMethods += @"
+        $httpAttribute
+        public async Task<IActionResult> $nomeMetodo($parametroComAnotacao)
+        {
+            return Ok(await this._$entidadeNome`AppService.$nomeMetodo($parametroNome));
+        }
+"@
+
+        # AppService
+        $appServiceMethods += @"
+        public async Task<$paramentroRetornoTipo> $nomeMetodo($parametroTipo $parametroNome)
+        {
+            return await this._$entidadeNome`Service.$nomeMetodo($parametroNome);
+        }
+"@
+
+        # Service
+        $serviceMethods += @"
+        public async Task<$paramentroRetornoTipo> $nomeMetodo($parametroTipo $parametroNome)
+        {
+            return await this._$entidadeNome`Repository.$nomeMetodo($parametroNome);
+        }
+"@
+
+        # Repository
+        $repositoryMethods += @"
+        public async Task<$paramentroRetornoTipo> $nomeMetodo($parametroTipo $parametroNome)
+        {
+            var p = this.Parametros($parametroNome);
+
+            try
+            {
+                using (SqlConnection connection = this._dbOppContext._connection)
+                    await connection.ExecuteAsync(`"$proc`", p, commandType: CommandType.StoredProcedure, commandTimeout: this._dbOppContext._timeOut);
+
+                return p.Get<$paramentroRetornoTipo>(`"@inSuccess`");
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(`"Erro: `", ex);
+            }
+        }
+"@
     }
 }
 
@@ -53,7 +121,7 @@ namespace $nameSpace.Controllers
             _logger = logger;
         }
 
-        // Métodos do controller
+$controllerMethods
     }
 }
 "@
@@ -77,7 +145,7 @@ namespace $nameSpace.Application.AppService
             _$entidadeNome`Service = $entidadeNome`Service;
         }
 
-        // Métodos do AppService
+$appServiceMethods
     }
 }
 "@
@@ -101,7 +169,7 @@ namespace $nameSpace.Domain.Service
             _$entidadeNome`Repository = $entidadeNome`Repository;
         }
 
-        // Métodos do Service
+$serviceMethods
     }
 }
 "@
@@ -115,19 +183,20 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
+using System.Data.SqlClient;
 
 namespace $nameSpace.Data.SqlServer.Repository
 {
     public class $entidadeNome`Repository : I$entidadeNome`Repository
     {
-        private readonly DbBaseOppContext _dbBaseOppContext;
+        private readonly DbOppContext _dbOppContext;
 
-        public $entidadeNome`Repository(DbBaseOppContext dbBaseOppContext)
+        public $entidadeNome`Repository(DbOppContext dbOppContext)
         {
-            _dbBaseOppContext = dbBaseOppContext;
+            _dbOppContext = $dbOppContext;
         }
 
-        // Métodos do Repositório
+$repositoryMethods
     }
 }
 "@
@@ -141,7 +210,7 @@ namespace $nameSpace.Application.Interface
 {
     public interface I$entidadeNome`AppService
     {
-$method    }
+$interfaceMethods    }
 }
 "@
 
@@ -154,7 +223,7 @@ namespace $nameSpace.Domain.Interface.Service
 {
     public interface I$entidadeNome`Service
     {
-$method    }
+$interfaceMethods    }
 }
 "@
 
@@ -167,7 +236,7 @@ namespace $nameSpace.Domain.Interface.Repository
 {
     public interface I$entidadeNome`Repository
     {
-$method    }
+$interfaceMethods    }
 }
 "@
 
